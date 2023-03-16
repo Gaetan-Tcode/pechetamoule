@@ -2,11 +2,12 @@
 
 namespace App\Entity;
 
-use App\Repository\TideRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use App\Repository\TideRepository;
 use ApiPlatform\Metadata\ApiResource;
 use Doctrine\Common\Collections\ArrayCollection;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: TideRepository::class)]
 #[ApiResource]
@@ -15,22 +16,31 @@ class Tide
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['harbor:item', 'harbor:list'])]
     private ?int $id = null;
 
     #[ORM\Column]
+    #[Groups(['harbor:item', 'harbor:list'])]
     private ?float $highHeight = null;
 
     #[ORM\Column]
+    #[Groups(['harbor:item', 'harbor:list'])]
     private ?float $lowHeight = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    #[Groups(['harbor:item', 'harbor:list'])]
     private ?\DateTimeInterface $highHour = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    #[Groups(['harbor:item', 'harbor:list'])]
     private ?\DateTimeInterface $lowHour = null;
 
     #[ORM\Column]
+    #[Groups(['harbor:item', 'harbor:list'])]
     private ?float $coefficient = null;
+
+    #[ORM\ManyToOne(inversedBy: 'tides')]
+    private ?Harbor $harbor = null;
 
     public function getId(): ?int
     {
@@ -93,6 +103,18 @@ class Tide
     public function setCoefficient(float $coefficient): self
     {
         $this->coefficient = $coefficient;
+
+        return $this;
+    }
+
+    public function getHarbor(): ?Harbor
+    {
+        return $this->harbor;
+    }
+
+    public function setHarbor(?Harbor $harbor): self
+    {
+        $this->harbor = $harbor;
 
         return $this;
     }

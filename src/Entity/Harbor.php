@@ -2,14 +2,25 @@
 
 namespace App\Entity;
 
-use App\Repository\HarborRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
+use ApiPlatform\Metadata\Get;
 use Doctrine\ORM\Mapping as ORM;
+use ApiPlatform\Metadata\ApiFilter;
+use App\Repository\HarborRepository;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\GetCollection;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\Common\Collections\ArrayCollection;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: HarborRepository::class)]
-#[ApiResource]
+#[ApiResource(
+    operations: [
+        new Get(normalizationContext: ['groups' => 'harbor:item']),
+        new GetCollection(normalizationContext: ['groups' => 'harbor:list'])
+    ],
+    order: ['id' => 'ASC'],
+    paginationEnabled: false,
+)]
 class Harbor
 {
     #[ORM\Id]
@@ -18,20 +29,29 @@ class Harbor
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['harbor:item', 'harbor:list'])]
     private ?string $name = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['harbor:item', 'harbor:list'])]
     private ?string $latitude = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['harbor:item', 'harbor:list'])]
     private ?string $longitude = null;
 
-    #[ORM\OneToMany(mappedBy: 'harbor', targetEntity: Day::class)]
-    private Collection $days;
+    #[ORM\OneToMany(mappedBy: 'harbor', targetEntity: Tide::class)]
+    #[Groups(['harbor:item', 'harbor:list'])]
+    
+    private Collection $tides;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $Department = null;
 
     public function __construct()
     {
         $this->days = new ArrayCollection();
+        $this->tides = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -76,31 +96,43 @@ class Harbor
     }
 
     /**
-     * @return Collection<int, Day>
+     * @return Collection<int, Tide>
      */
-    public function getDays(): Collection
+    public function getTides(): Collection
     {
-        return $this->days;
+        return $this->tides;
     }
 
-    public function addDay(Day $day): self
+    public function addTide(Tide $tide): self
     {
-        if (!$this->days->contains($day)) {
-            $this->days->add($day);
-            $day->setHarbor($this);
+        if (!$this->tides->contains($tide)) {
+            $this->tides->add($tide);
+            $tide->setHarbor($this);
         }
 
         return $this;
     }
 
-    public function removeDay(Day $day): self
+    public function removeTide(Tide $tide): self
     {
-        if ($this->days->removeElement($day)) {
+        if ($this->tides->removeElement($tide)) {
             // set the owning side to null (unless already changed)
-            if ($day->getHarbor() === $this) {
-                $day->setHarbor(null);
+            if ($tide->getHarbor() === $this) {
+                $tide->setHarbor(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getDepartment(): ?string
+    {
+        return $this->Department;
+    }
+
+    public function setDepartment(?string $Department): self
+    {
+        $this->Department = $Department;
 
         return $this;
     }

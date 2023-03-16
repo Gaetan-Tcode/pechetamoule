@@ -13,20 +13,21 @@ class AppFixtures extends Fixture
     public function load(ObjectManager $manager): void
     {
         $harbor = new Harbor();
-        $day1 = new Day();
-        $day2 = new Day();
-        $tide1 = new Tide();
-        $tide2 = new Tide();
-        $tide3 = new Tide();
-        $tide4 = new Tide();
+        $harbor->setName("Le Havre");
+        $harbor->setLatitude("49.49437");
+        $harbor->setLongitude("0.107929");
+        for($i = 0; $i < 7; $i++){
+            $tide = new Tide();
+            $tide->setCoefficient(2.6);
+            $tide->setHighHeight(6.2);
+            $tide->setLowHeight(2.2);
+            $tide->setHighHour(new \DateTime);
+            $tide->setLowHour(new \DateTime);
+            $tide->setHarbor($harbor);
+            $manager->persist($tide);
+        }
 
         $manager->persist($harbor);
-        $manager->persist($day1);
-        $manager->persist($day2);
-        $manager->persist($tide1);
-        $manager->persist($tide2);
-        $manager->persist($tide3);
-        $manager->persist($tide4);
 
         $manager->flush();
     }
