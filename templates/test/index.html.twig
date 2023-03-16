@@ -13,8 +13,13 @@
 
     This friendly message is coming from:
     <ul>
-        <li>Your controller at <code><a href="{{ 'C:/Users/Nouma/PhpstormProjects/pechetamoule/src/Controller/TestController.php'|file_link(0) }}">src/Controller/TestController.php</a></code></li>
-        <li>Your template at <code><a href="{{ 'C:/Users/Nouma/PhpstormProjects/pechetamoule/templates/test/index.html.twig'|file_link(0) }}">templates/test/index.html.twig</a></code></li>
+        {% for harbor in harbors %}
+
+            <li>
+                {{ harbor.name }}
+            </li>
+
+        {% endfor %}
     </ul>
 </div>
 {% endblock %}

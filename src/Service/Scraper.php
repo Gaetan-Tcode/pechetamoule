@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Entity\Harbor;
 use App\Entity\Tide;
 use DateTime;
 use Doctrine\ORM\EntityManager;
@@ -34,24 +35,26 @@ class Scraper {
             ->filter('.select_port')
             ->filter('optgroup')
             ->each(function (Crawler $optgroup, $i) {
-                echo $optgroup->attr('label') . '<br />';
 
-                $optgroup->children()->each(function (Crawler $option, $i) {
-                    if ($option->nodeName() == 'option')
-                        echo $option->text() . '<br />';
+                $optgroup->children()->each(function (Crawler $option, $i) use ($optgroup) {
+                    if ($option->nodeName() != 'option') return;
+
+                    $harbor = new Harbor();
+
+                    $harbor->setname($option->text());
+                    $harbor->setDepartment($optgroup->attr('label'));
+                    $harbor->setLatitude('');
+                    $harbor->setLongitude('');
+
+                    $this->manager->persist($harbor);
                 });
-            });
 
-//                $groupNode
-//                    ->filter('option')
-//                    ->each(function ($optionNode, $i) {
-//                        echo ' - ' . $optionNode->text() . '<br />';
-//                    });
+                $this->manager->flush();
+            });
     }
 
     public function tides($harbor) {
-        $date = '20230301';
-        $url = 'http://www.horaire-maree.fr/maree/' . $harbor . '/';
+        $url = 'http://www.horaire-maree.fr/';
 
         $client = new Client();
 
@@ -59,61 +62,71 @@ class Scraper {
 
         $crawler = new Crawler($response);
 
-        // morning & afternoon
-        for ($i = 0; $i < 2; $i++) {
-            // scrap
-            $coef = $crawler
-                ->filter($i % 2 == 0
-                    ? 'tr.bluesoftoffice:nth-child(3) > td:nth-child(1) > strong:nth-child(1)'
-                    : 'td.blueoffice:nth-child(4)')
-                ->innerText();
+        $crawler->filter('#footer_ports1 > ul > li')->filter('a')
+            ->each(function (Crawler $a, $i) use ($harbor, $client) {
+                $date = '20230301';
 
-            $lowHour = $crawler
-                ->filter($i % 2 == 0
-                    ? 'tr.bluesoftoffice:nth-child(3) > td:nth-child(2) > strong:nth-child(1)'
-                    : 'tr.bluesoftoffice:nth-child(3) > td:nth-child(5) > strong:nth-child(1)')
-                ->innerText();
+                $response = $client->get($a->link()->getUri())->getBody()->getContents();
+                $tideCrawler = new Crawler($response);
 
-            $highHour = $crawler
-                ->filter($i % 2 == 0
-                    ? 'tr.bluesoftoffice:nth-child(3) > td:nth-child(3) > strong:nth-child(1)'
-                    : 'tr.bluesoftoffice:nth-child(3) > td:nth-child(6) > strong:nth-child(1)')
-                ->innerText();
+                // morning & afternoon
+                for ($i = 0; $i < 2; $i++) {
+                    // scrap
+                    $coef = $tideCrawler
+                        ->filter($i % 2 == 0
+                            ? 'tr.bluesoftoffice:nth-child(3) > td:nth-child(1) > strong:nth-child(1)'
+                            : 'td.blueoffice:nth-child(4)')
+                        ->innerText();
 
-            $lowHeight = $crawler
-                ->filter($i % 2 == 0
-                    ? 'tr.bluesoftoffice:nth-child(3) > td:nth-child(2)'
-                    : 'tr.bluesoftoffice:nth-child(3) > td:nth-child(5)')
-                ->text();
-            $lowHeight = (float) str_replace(',', '.', explode(' ', $lowHeight)[1]);
+                    $lowHour = $tideCrawler
+                        ->filter($i % 2 == 0
+                            ? 'tr.bluesoftoffice:nth-child(3) > td:nth-child(2) > strong:nth-child(1)'
+                            : 'tr.bluesoftoffice:nth-child(3) > td:nth-child(5) > strong:nth-child(1)')
+                        ->innerText();
 
-            $highHeight = $crawler
-                ->filter($i % 2 == 0
-                    ? 'tr.bluesoftoffice:nth-child(3) > td:nth-child(3)'
-                    : 'tr.bluesoftoffice:nth-child(3) > td:nth-child(6)')
-                ->text();
-            $highHeight = (float) str_replace(',', '.', explode(' ', $highHeight)[1]);
+                    $highHour = $tideCrawler
+                        ->filter($i % 2 == 0
+                            ? 'tr.bluesoftoffice:nth-child(3) > td:nth-child(3) > strong:nth-child(1)'
+                            : 'tr.bluesoftoffice:nth-child(3) > td:nth-child(6) > strong:nth-child(1)')
+                        ->innerText();
 
-            // new instance & persist
-            $tide = new Tide();
+                    $lowHeight = $tideCrawler
+                        ->filter($i % 2 == 0
+                            ? 'tr.bluesoftoffice:nth-child(3) > td:nth-child(2)'
+                            : 'tr.bluesoftoffice:nth-child(3) > td:nth-child(5)')
+                        ->text();
+                    $lowHeight = (float) str_replace(',', '.', explode(' ', $lowHeight)[1]);
 
-            $tide->setLowHour($this
-                ->formatter
-                ->format($date, $lowHour)
-            );
-            $tide->setHighHour($this
-                ->formatter
-                ->format($date, $highHour)
-            );
+                    $highHeight = $tideCrawler
+                        ->filter($i % 2 == 0
+                            ? 'tr.bluesoftoffice:nth-child(3) > td:nth-child(3)'
+                            : 'tr.bluesoftoffice:nth-child(3) > td:nth-child(6)')
+                        ->text();
+                    $highHeight = (float) str_replace(',', '.', explode(' ', $highHeight)[1]);
 
-            $tide->setLowHeight($lowHeight);
-            $tide->setHighHeight($highHeight);
+                    // new instance & persist
+                    $tide = new Tide();
 
-            $tide->setCoefficient($coef);
+                    $tide->setLowHour($this
+                        ->formatter
+                        ->format($date, $lowHour)
+                    );
+                    $tide->setHighHour($this
+                        ->formatter
+                        ->format($date, $highHour)
+                    );
 
-            $this->manager->persist($tide);
-        }
+                    $tide->setLowHeight($lowHeight);
+                    $tide->setHighHeight($highHeight);
 
-        $this->manager->flush();
+                    $tide->setCoefficient($coef);
+
+                    $tide->setHarbor($harbor);
+
+                    $this->manager->persist($tide);
+                }
+
+                $this->manager->flush();
+            });
     }
 }
