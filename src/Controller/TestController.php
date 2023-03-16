@@ -12,7 +12,8 @@ class TestController extends AbstractController
     #[Route('', name: 'app_test')]
     public function index(Scraper $scraper): Response
     {
-        $scraper->scrapPorts();
+        $scraper->harbors();
+        $scraper->tides('LE_TOUQUET');
         return $this->render('test/index.html.twig', [
             'controller_name' => 'TestController',
         ]);

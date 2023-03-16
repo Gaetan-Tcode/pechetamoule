@@ -6,10 +6,9 @@ use DateTime;
 
 class DateTimeFormatter {
 
-    public function format($date) {
-        $dateString = '2023-03-16 15:30:00';
-        $format = 'Y-m-d H:i:s';
-        return DateTime::createFromFormat($format, $dateString);
+    public function format($date, $hour) {
+        $format = 'Ymd H:i';
+        return DateTime::createFromFormat($format, $date . str_replace('h', ':', $hour));
     }
 
 }
